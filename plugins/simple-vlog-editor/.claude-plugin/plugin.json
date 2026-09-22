@@ -1,0 +1,38 @@
+{
+  "name": "simple-vlog-editor",
+  "displayName": "Simple Vlog Editor",
+  "version": "1.7.4",
+  "description": "Windows x64 only. Understand and edit complete videos in the SimpleVlogEditor desktop app (installed separately from simplevlogeditor.com) through its local MCP server.",
+  "author": {
+    "name": "João Ricardo Côre",
+    "email": "jrdutra.com.br@gmail.com",
+    "url": "https://simplevlogeditor.com/"
+  },
+  "license": "MIT",
+  "homepage": "https://simplevlogeditor.com/",
+  "keywords": [
+    "video",
+    "editing",
+    "noise-suppression",
+    "transcription",
+    "mcp",
+    "push-in",
+    "video-effects",
+    "background-caption",
+    "placed-images",
+    "allowed-folders",
+    "vlog",
+    "autonomous-editing"
+  ],
+  "mcpServers": {
+    "simple-vlog-editor": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/mcp-launcher.mjs"
+      ],
+      "env": {
+        "SVE_CONTROLLER": "claude-code"
+      }
+    }
+  }
+}

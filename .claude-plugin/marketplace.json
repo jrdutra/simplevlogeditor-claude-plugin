@@ -1,0 +1,26 @@
+{
+  "name": "simplevlogeditor",
+  "owner": {
+    "name": "João Ricardo Côre",
+    "email": "jrdutra.com.br@gmail.com",
+    "url": "https://simplevlogeditor.com/"
+  },
+  "plugins": [
+    {
+      "name": "simple-vlog-editor",
+      "source": "./plugins/simple-vlog-editor",
+      "description": "Windows x64 only. Understand and edit complete videos in the SimpleVlogEditor desktop app (installed separately) through its local MCP server: cuts, captions, tags, transitions, audio, video effects and placed images. Includes an autonomous vlog-editing skill.",
+      "version": "1.7.4",
+      "category": "Productivity",
+      "keywords": [
+        "video",
+        "editing",
+        "mcp",
+        "local",
+        "electron"
+      ],
+      "license": "MIT",
+      "homepage": "https://simplevlogeditor.com/"
+    }
+  ]
+}
