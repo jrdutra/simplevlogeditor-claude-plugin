@@ -10,7 +10,7 @@
       "name": "simple-vlog-editor",
       "source": "./plugins/simple-vlog-editor",
       "description": "Windows x64 only. Understand and edit complete videos in the SimpleVlogEditor desktop app (installed separately) through its local MCP server: cuts, captions, tags, transitions, audio, video effects and placed images. Includes an autonomous vlog-editing skill.",
-      "version": "1.7.5",
+      "version": "1.7.7",
       "category": "Productivity",
       "keywords": [
         "video",

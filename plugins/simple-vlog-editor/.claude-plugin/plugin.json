@@ -1,7 +1,7 @@
 {
   "name": "simple-vlog-editor",
   "displayName": "Simple Vlog Editor",
-  "version": "1.7.5",
+  "version": "1.7.7",
   "description": "Windows x64 only. Understand and edit complete videos in the SimpleVlogEditor desktop app (installed separately from simplevlogeditor.com) through its local MCP server.",
   "author": {
     "name": "João Ricardo Côre",
