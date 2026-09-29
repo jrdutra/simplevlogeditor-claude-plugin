@@ -45,7 +45,7 @@ Tell the user, in their language, to download the installer from https://simplev
 - `get_recovery_state` / `checkpoint_project`: inspect or force the complete JSON recovery checkpoint.
 - `restart_editor` / `close_editor`: save state and restart or close the visible Electron process without losing the edit.
 - `get_operation_status` / `cancel_operation`: priority-channel progress and cooperative cancellation, even while the edit queue is busy.
-- `finish_editing`: show the final Preview/Render choice in the visible editor.
+- `finish_editing`: show the final Preview/Render choice in the visible editor. Include the `youtubePolicyReview` required by `review-youtube-policy`; committed policy removals become a detailed alert in this modal.
 - `get_project`: complete serialized edit and revision.
 - `list_assets`: unique sources, media metadata, availability, and clip usage.
 - `get_timeline`: source/output timing, cuts, captions, tags, transitions, audio, zooms, and push-in IDs.

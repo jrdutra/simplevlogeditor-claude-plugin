@@ -249,6 +249,14 @@ and avoid random intensities: the changes follow the structure of the speech.
 Decide: clips kept, clips removed, order, speech removed, redundancies removed,
 silences removed, push-in candidates. **No purely decorative elements yet.**
 
+## Phase 20a — YouTube policy review
+
+Follow **`review-youtube-policy`** across every transcript, audible passage,
+visual stretch, visible or spoken link, and planned on-screen element. Add the
+smallest justified policy cuts to the structural batch, distinct from ordinary
+mistake, redundancy and silence cuts. Record each committed source interval,
+evidence, policy rule and continuity check for the completion report.
+
 ## Phase 21 — Execute the structure
 
 One `apply_edit_batch` with `move_clip`, `trim_clip`, `delete_source_range`,
@@ -391,7 +399,9 @@ confirm the duration; confirm the operations you intended are all present;
 
 ## Phase 39 — Finish
 
-`finish_editing` with a concise summary. Then read `videoPackaging.automatic` in
+`finish_editing` with a concise summary and the complete `youtubePolicyReview`
+object from `review-youtube-policy`, including an empty `findings` array when the
+review found no removal violation. Then read `videoPackaging.automatic` in
 its result: when it is `true`, run `create-video-packaging` straight away; when it
 is `false`, the user switched automatic Video Packaging off for this project, so
 the edit ends here — do not make covers, titles, a description or tags unless

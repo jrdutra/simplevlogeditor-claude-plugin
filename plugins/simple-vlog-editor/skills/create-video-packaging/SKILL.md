@@ -197,6 +197,14 @@ them all true to the content. Around 15 to 25 tags is right; do not pad.
 
 ## Step 8 — Draw the covers, then deliver
 
+Before drawing or delivering, follow **`review-youtube-policy`** for the three
+titles, cover concepts/text, description, chapters, hashtags, tags, QR links and
+chosen final frames. Replace policy-breaking or materially misleading packaging.
+If the review discovers a violation still present in the finished timeline,
+return to `edit-video`, remove it with verified semantic continuity, call
+`finish_editing` again with the updated `youtubePolicyReview`, and only then
+save new cover frames; an old frame is tied to the pre-fix edit.
+
 Now, and only now, generate the three covers — one per title, using its paired
 background and its cover text, with the prompt in
 `references/cover-prompt.md`. Save each as a 16:9 PNG in the `coversFolder`

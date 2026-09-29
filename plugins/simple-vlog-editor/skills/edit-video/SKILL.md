@@ -38,6 +38,17 @@ For transcription, use `onnx-community/whisper-small_timestamped` by default. Us
 
 Do not claim to have watched or understood an asset that was not covered by transcript/audio evidence and frames. If an asset cannot be decoded, report it explicitly and continue safely with the remaining material.
 
+## Mandatory YouTube policy pass
+
+Every finished edit must also follow the **`review-youtube-policy`** skill. Review
+the complete kept speech, audio and picture plus every caption, card, placed
+image, effect, tag, QR destination, visible/spoken URL and supplied publishing
+asset. Apply evidence-based policy cuts before completion, verify that every join
+preserves the speaker's meaning, and retain the structured record for
+`finish_editing`. This pass is required even when it produces an empty findings
+list; never treat advertiser suitability or an age restriction as if it were a
+Community Guidelines removal.
+
 ## Edit safely
 
 - A request about part of a clip is a **section**: `add_video_effect` with `start` and `duration` in original source seconds, `update_video_effect` with a partial `videoEffect`, `remove_video_effect` to take one away. `set_video_effect` remains the whole-container call. Never use `effectId: "none"` to delete a section — it is refused. Sections cannot overlap; on `video_effect_overlap` read `details.maximumDuration` and `details.occupied` instead of guessing a shorter one. `fadeSeconds` is the edge: 0 is a hard cut, above 0 eases the effect in and out, clamped to half the section. Pick a fade for a smooth or subtle request and a cut for an abrupt one; default to a cut when the user did not say.
@@ -119,6 +130,6 @@ in that language, use English and say that is what you did. This applies to the
 description and the chapter titles only: interface strings, log lines and your
 own account of what you changed stay in English.
 
-The editor's MCP activity console is visible to the user and remains minimized if the user minimizes it. Keep tool calls meaningfully grouped. At the end, save a checkpoint, call `finish_editing` with a concise summary, and let the on-screen modal ask whether to watch the preview or render immediately. Then read `videoPackaging.automatic` in the `finish_editing` result. `true` (the project default): run `create-video-packaging` without being asked, so the finished edit gets its three covers, three titles, description with chapters and hashtags, and tags in the Video Packaging tool. `false`: the user switched automatic Video Packaging off in the project settings — stop at the edit and package only if they ask. Also report subjective decisions, current project revision, and saved/exported paths in chat.
+The editor's MCP activity console is visible to the user and remains minimized if the user minimizes it. Keep tool calls meaningfully grouped. At the end, save a checkpoint, call `finish_editing` with a concise summary **and the `youtubePolicyReview` object required by `review-youtube-policy`**, and let the on-screen modal ask whether to watch the preview or render immediately. When policy-breaking passages were removed, that modal is also the user's detailed audit of every source range, policy and continuity check. Then read `videoPackaging.automatic` in the `finish_editing` result. `true` (the project default): run `create-video-packaging` without being asked, so the finished edit gets its three covers, three titles, description with chapters and hashtags, and tags in the Video Packaging tool. `false`: the user switched automatic Video Packaging off in the project settings — stop at the edit and package only if they ask. Also report subjective decisions, current project revision, and saved/exported paths in chat.
 
 For the complete command and operation catalogue, read [MCP operations](references/mcp-operations.md) when planning a concrete edit.
