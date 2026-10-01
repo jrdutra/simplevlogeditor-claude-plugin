@@ -5,6 +5,8 @@ description: Use when the user asks to edit a whole vlog (or "this footage", "my
 
 # Edit a vlog autonomously in SimpleVlogEditor
 
+The local SimpleVlogEditor desktop application includes a built-in MCP server that receives AI control commands. The `simple-vlog-editor` AI client plugin connects to this server and exposes tools for reading and controlling the project in the local desktop editor. Use this MCP connection as the control interface for this workflow.
+
 Work like a human editor: first understand all the material, then reconstruct the
 story, plan the edit, and only then change the timeline. This skill is the
 editorial workflow; the **`edit-video`** skill is the operating manual for the
@@ -27,6 +29,18 @@ Priorities, in this order:
 **Central rule:** do not try to show off every feature. Use only what improves
 *this* vlog. The edit should feel deliberate, natural and human.
 
+For every full-vlog request, read [references/editorial-blocks.md](references/editorial-blocks.md)
+before analysis. It defines the single-file/rough-cut workflow, the mandatory
+five-minute semantic analysis blocks, cut-activation checks, readable cards and
+the keyword-caption pass. A graphics-only change is incomplete when structural
+problems remain.
+
+Before any structural cut, also read [the pre-cut audiovisual inspection](../edit-video/references/cut-inspection.md).
+Every boundary needs four seconds before and after, inspected through actual
+source frames and audio in 200 ms windows plus the surrounding transcript.
+Review both edges of removals and every enabled silence before activation;
+descriptions alone are never enough to authorise a cut.
+
 **Hierarchy of intervention** — prefer the one higher up; the further down, the
 stronger the justification it needs:
 
@@ -37,23 +51,17 @@ image → text → transition → visual effect
 
 ## Recovering without drama
 
-Timeouts, stalled media, lost connections and editor restarts are **not errors of the
-edit**. The host retries them and reopens the editor from its checkpoint by itself; if
-one still reaches you, follow the recovery steps in `edit-video` (health check →
-`restart_editor` → `get_project`/`get_timeline` → continue) and keep going. A `revision_conflict` is the same: re-read `get_project`, redo the change on the new
-revision and carry on. Do not
-report them to the user as failures unless something stays blocked.
+Follow the bounded recovery rules in `edit-video`. Lightweight reads may be retried by the host; `transcribe` is never replayed automatically. Inspect its actual stage and error, report stalls clearly, and read the restored project after `transcription_interrupted` before an explicit retry with a new requestId. Cancellation ends the operation. After a revision conflict, re-read the project and rebuild only a missing change; stop repeating it if the conflict persists.
 
 ## Phase 0 — Start safely
 
 1. `get_recovery_state` — is there a previous edit or checkpoint for this material? (Resume rules: see `edit-video`.)
-2. `health_check` — the editor is connected and visible. If the only tools available are `check_installation`, `health_check` and `get_editor_capabilities`, SimpleVlogEditor is not installed: tell the user to download the installer from https://simplevlogeditor.com/, install it keeping the default folder, and call `check_installation` once they have.
+2. `health_check` — confirm the editor is connected and visible. If only the three setup tools are exposed, call `check_installation` and distinguish `editor_not_installed` from `editor_outdated`; follow the setup instructions in `edit-video`.
 3. `get_editor_capabilities` — read limits, presets, fonts, tag shapes, transitions. Pass on any `updateNotice` to the user first.
-   Editor and plugin ship together and a vlog edit is long: before starting one, make sure both are the current release. If either is behind, ask the user to install the current editor from https://simplevlogeditor.com/ (uninstalling the old one first, then restarting the computer), to reinstall this plugin from its repository, and to restart Claude Code or Codex — and wait for them rather than editing across versions.
+   Follow the compatibility guidance in `edit-video`: report a mismatch, verify required capabilities and update the affected component when necessary.
 4. `get_project` and `get_timeline` — record the current `revision`.
 
-Never start from an old revision. Every later mutation carries `expectedRevision`
-and a fresh `requestId`. Before large changes, call `checkpoint_project`.
+Never start from an old revision. Supply `expectedRevision` only to commands whose schema accepts it. Mutations that require `requestId` receive a fresh id for a new action; preserve the exact id and payload while that same action has an uncertain outcome. Before large changes, call `checkpoint_project`.
 
 ## Phase 1 — Import and inventory (no edits yet)
 
@@ -90,6 +98,11 @@ publishing description follow the language of the user's prompt, as `edit-video`
 says.)
 
 ## Phase 5 — Map the speech
+
+Apply the block workflow in `references/editorial-blocks.md`: review **every**
+block separately, refine its boundaries semantically, and divide video containers
+longer than 300 source seconds before the structural cut pass. Carry the source
+transcript and continuity context across the new ids.
 
 For each transcribed clip, in source seconds: main subject, secondary subjects,
 people, places, events, questions and answers, introductions, explanations,
@@ -197,6 +210,10 @@ missed is a `delete_source_range`. Leave the editor's own automatic zoom
 (`edits.silence.autoZoom.enabled`) **off**: the push-ins below are placed by hand
 so each one can pass the visual checks.
 
+Check `cutSilenceEnabled` and `appliedSilenceSeconds` in analysis results, then
+verify actual `keepRanges` in the committed timeline. Detection or a successful
+dry run is never evidence that the exported video contains those cuts.
+
 ## Phase 16 — Push-in after a relevant removed silence
 
 After deciding the removals, compute for each clip the **mean duration of the
@@ -249,14 +266,6 @@ and avoid random intensities: the changes follow the structure of the speech.
 Decide: clips kept, clips removed, order, speech removed, redundancies removed,
 silences removed, push-in candidates. **No purely decorative elements yet.**
 
-## Phase 20a — YouTube policy review
-
-Follow **`review-youtube-policy`** across every transcript, audible passage,
-visual stretch, visible or spoken link, and planned on-screen element. Add the
-smallest justified policy cuts to the structural batch, distinct from ordinary
-mistake, redundancy and silence cuts. Record each committed source interval,
-evidence, policy rule and continuity check for the completion report.
-
 ## Phase 21 — Execute the structure
 
 One `apply_edit_batch` with `move_clip`, `trim_clip`, `delete_source_range`,
@@ -295,10 +304,25 @@ time. Never because they happen to be available. Verify every placement as
 
 ## Phase 26 — Text cards
 
+Reserve **2.5 extra seconds of fully readable hold**, after a short reveal, using
+the reading-time guidance in `references/editorial-blocks.md`. Automatic hold is
+preferred; do not override it with a brief `durationSeconds` total. Preview the
+whole reveal and hold, not only a still frame.
+
 For important changes of context only: “Next morning…”, “After lunch…”, “Day 2”,
 “Arriving in Asunción”. Not between every clip. Written in the vlog's language.
+Let the renderer reduce the effective font size and balance line breaks for long
+titles; do not preserve an oversized font by squeezing the text box. Inspect a
+composited frame after the reveal and one during the animation at the project's
+real aspect ratio. Every accented glyph, outline and shadow must remain inside
+the safe margins.
 
 ## Phase 27 — Background captions
+
+Complete an explicit keyword-candidate pass over every block. Aim to use 2–3
+strong, relevant highlights when suitable footage exists. If a candidate fails
+the matte/framing check, try another; explain any remaining omission and use a
+classic keyword caption when that communicates the same emphasis cleanly.
 
 Short highlight words or phrases (“PARAGUAY”, “DAY 2”, “R$ 120”, “IT WENT WRONG”,
 “3 HOURS LATER”), in the vlog's language, following the background-caption style
@@ -397,11 +421,20 @@ push-ins, images, effects, Subscribe, cards, and the ending. Fix what you find.
 confirm the duration; confirm the operations you intended are all present;
 `checkpoint_project`.
 
+## Phase 38a — Final-only YouTube policy gate
+
+Only now load **`review-youtube-policy`** and its detailed catalog. Review the
+complete kept speech, audio, visuals, on-screen elements, links and any prepared
+publishing material. Keep one structured result and reuse it instead of loading
+the catalog repeatedly. If a violation requires a cut, re-open the structure,
+make the smallest coherent source cut, preview the join, repeat Phases 36–38,
+and run this policy gate again on the changed result.
+
 ## Phase 39 — Finish
 
 `finish_editing` with a concise summary and the complete `youtubePolicyReview`
-object from `review-youtube-policy`, including an empty `findings` array when the
-review found no removal violation. Then read `videoPackaging.automatic` in
+object from the final gate, including an empty `findings` array when the review
+found no removal violation. Then read `videoPackaging.automatic` in
 its result: when it is `true`, run `create-video-packaging` straight away; when it
 is `false`, the user switched automatic Video Packaging off for this project, so
 the edit ends here — do not make covers, titles, a description or tags unless

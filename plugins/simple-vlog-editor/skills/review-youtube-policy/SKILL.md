@@ -1,18 +1,26 @@
 ---
 name: review-youtube-policy
-description: Review a video, edit, thumbnail, title, description, links, captions, audio, and other publishing material against YouTube Community Guidelines; remove policy-breaking source passages while preserving meaning and produce the structured removal report shown by SimpleVlogEditor at completion.
+description: Use only after a video edit is editorially and technically complete, or when the user explicitly asks for a YouTube policy review. Review the final video and publishing material, make the smallest coherent policy cuts, and produce SimpleVlogEditor's structured removal report.
 ---
 
 # Review YouTube policy compliance
 
-Use this skill for every finished edit and whenever the user asks whether video
-content is safe to publish on YouTube. It complements `edit-video`: that skill
-operates the editor; this one decides what requires a policy cut and how the cut
-is documented.
+The local SimpleVlogEditor desktop application includes a built-in MCP server that receives AI control commands. The `simple-vlog-editor` AI client plugin connects to this server and exposes tools for reading and controlling the project in the local desktop editor. Use this MCP connection as the control interface for this workflow.
 
-Before classifying anything, read the complete [policy catalog](references/youtube-community-guidelines.md).
+Use this skill only at the final policy gate, after narrative, rhythm, speech,
+picture and sound decisions are complete, or when the user explicitly asks for
+a policy review. Do not load it while assembling the story and do not let policy
+classification compete with ordinary editorial decisions.
+
+At that final gate, read the complete [policy catalog](references/youtube-community-guidelines.md) once.
 It covers every policy in the supplied reference set, the cross-policy rules,
 and the stable identifiers used in reports.
+
+Keep one structured review record for the run. Reuse that record and the policy
+identifiers instead of loading or pasting the catalog again for packaging. If a
+policy cut changes the timeline, re-open the edit, make the smallest coherent
+cut, verify the join, then review the changed final result again before marking
+the review complete.
 
 ## Review the actual publication
 

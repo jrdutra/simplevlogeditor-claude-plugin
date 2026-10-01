@@ -1,13 +1,44 @@
 # SimpleVlogEditor MCP operations
 
+## Long-video editorial analysis
+
+- Before cutting, follow [cut-inspection.md](cut-inspection.md): four seconds
+  before/after every boundary, actual frames and source audio at 200 ms plus
+  the transcript, before committing any removal or enabling detected silence.
+- `get_audio_levels`: decode any explicit source `start`/`end`, no prior
+  analysis required. Default `interval: 0.2` measures all PCM in each bin;
+  returns RMS/peak, dBFS, per-channel levels and coverage. Ranges up to 120s.
+  `includeAudio: true` attaches original WAV as native MCP audio (up to 12s,
+  8 MiB) for listening; never infer speech/sound meaning from meters alone.
+  Source reads can extend beyond a split's trim into its original neighbour.
+  Missing coverage is unknown, not silence. No audio track is explicit `noAudio`.
+  Include a unique `requestId` for operation progress/cancellation.
+
+- `transcribe` with `includeWords: false`: caches the complete source transcript,
+  returning quality and bounded analysis-block metadata without every word.
+- `get_analysis_blocks`: reads sentence/pause boundary suggestions, each at most
+  300 source seconds. Add `blockIndex` to read one block's words, text and silence
+  ranges. Refine the boundaries with semantic/visual analysis before `split_clip`.
+- `analyze_silence`: returns `scopedSilenceRanges` with original `rangeIndex`,
+  per-clip statistics, `cutSilenceEnabled` and `appliedSilenceSeconds`. Detection
+  does not activate cutting; commit the intended settings and verify the timeline.
+
 ## Video packaging (thumbnails and metadata)
 
-- `set_video_packaging`: place up to three generated 16:9 image paths, three matching titles, a complete description and tags in the visible Video Packaging tool. Use it for deliverable thumbnails or video metadata instead of adding them to the timeline. Omitted fields remain unchanged and the page receives focus after insertion.
+- `prepare_packaging_background`: deterministic exposure/colour/contrast pass on
+  a current saved `sourceFramePath`; writes a lossless PNG without scene/face
+  reconstruction. Inspect it and use its `path` as the cover-generation background,
+  while preserving the original `sourceFramePath`/`outputTime` for provenance.
+  Include `preparedBackgroundPath` in thumbnail delivery; the editor verifies
+  that it belongs to that original frame. Exposure, contrast and saturation can
+  be adjusted within the tool's limits. No grain or sharpening is introduced.
+
+- `set_video_packaging`: place up to three generated 16:9 image paths, three matching titles, a complete description and tags in the visible Video Packaging tool. Every thumbnail also supplies `sourceFramePath`, final-timeline `sourceTimestamp`, the active `tagStyleId` and `tagStyleReferencePath`, `letteringMethod`, and a checked `styleVerification`; stale backgrounds or style references are refused. Use it for deliverable thumbnails or video metadata instead of adding them to the timeline. Omitted fields remain unchanged and the page receives focus after insertion.
 - `get_video_packaging`: inspect the currently displayed package before a partial update or to verify delivery.
 - `clear_video_packaging`: remove the complete displayed package.
 - `get_packaging_sources`: one read of everything a packaging run needs — whether a project is loaded, which clips already have a transcript or saved cover backgrounds, what was understood on an earlier pass, the links the QR tags carry, and where covers may be written. Requires the Video Editor page to be open.
 - `save_frames`: write chosen frames to disk at full size, beside the footage, to serve as cover backgrounds. It saves the finished picture (the same composition as `get_frames` `composited: true`) and returns each file's `path`, source `timestamp` and `outputTime`. Instants that were cut out, fall inside a transition, or need a person cut-out the machine cannot compute are refused with `unfaithful_frame` and a `suggestedTimestamp`, before anything is written. Each file is tied to the edit it came from: after any later change it no longer counts as a background, and `set_video_packaging` refuses covers drawn on it.
-- `get_packaging_tag_style` / `set_packaging_tag_style`: the lettering every cover has to copy. Eleven styles ship with the editor (Classic is the default) and the user may have loaded their own, which the application keeps across restarts. When the user asked to be consulted, `get_packaging_tag_style` opens the picker on screen and waits for them.
+- `get_packaging_tag_style` / `set_packaging_tag_style`: the lettering every cover has to copy. The active style returns a stable id and a written reference-image path; attach that exact image to every cover generation and retain the pair in delivery metadata. The user may choose a shipped style or load their own. When the user asked to be consulted, `get_packaging_tag_style` opens the picker on screen and waits for them.
 - `set_video_understanding` / `get_video_understanding`: store and read back the summary, topics, chapters, highlights and language of the video, so a later run does not read the transcript and the frames again.
 
 The `create-video-packaging` skill is the workflow these belong to. Run it as soon as `finish_editing` returns **only when** its result says `videoPackaging.automatic: true`; the project setting `autoVideoPackaging` (a checkbox in the Video Editor's project settings, on by default) decides. When it is `false`, package only on the user's explicit request. `set_project_settings` accepts `{ "autoVideoPackaging": true | false }` — change it only when the user asks.
@@ -16,10 +47,17 @@ Always call `get_editor_capabilities` because the running editor is the final au
 
 ## Automatic recovery
 
-The MCP host retries recoverable failures itself before answering: a stalled media load
-or a hung editor (`media_timeout`, `editor_timeout`, `renderer_unresponsive`) reopens the
-editor, which restores the recovery checkpoint; a dropped connection is waited out.
-Reads are retried transparently (up to three attempts). A change interrupted by a
+The MCP host retries supported transient failures of lightweight reads up to three times, waiting for a dropped connection or reopening an unresponsive editor from its checkpoint. If the failure still reaches the client, inspect health and diagnostics and use at most one additional recovery attempt. Report an unresolved failure rather than looping. **Transcription
+is not replayed after a restart or dropped connection**: `transcription_interrupted`
+requires reading the restored project and explicitly retrying with a new requestId.
+`transcription_stalled`, `transcription_stage_timeout`, decoding/recognition errors
+and cancellation are reported once with their actual stage. Keep them visible;
+do not blindly repeat the same model/file. Inspect `get_operation_status` and
+`get_diagnostics` for the last phase, detail and percentage. The whole-operation
+budget defaults to 30 minutes; no-progress budget defaults to five minutes;
+explicit shorter budgets are honoured. Audio reads and worker startup also have
+60-second limits. Repeated identical progress does not renew the deadline.
+A change interrupted by a
 restart is not replayed blindly: it comes back as `editor_restored` (recoverable) — read
 the project and resend with a new `requestId` if the change is missing. `get_frames`
 also falls back from the media element to decoding the file directly when the element
@@ -38,23 +76,23 @@ Tell the user, in their language, to download the installer from https://simplev
 
 ## Understanding tools
 
-- `queue_media_import`: enqueue absolute local paths without transferring bytes; use a stable `requestId`.
+- `queue_media_import`: enqueue an explicit array of absolute file paths (not a directory) without transferring bytes; use a stable `requestId` and never reuse it for different arguments. Pending imports are bound to the active document, even when its revision advances. `project_changed` interrupts a job if the document is replaced; inspect the project before calling `resume_import`, which explicitly targets the current document and retries unfinished/recoverable files without reimporting successful ones.
 - `get_import_status`: progress, revision, imported asset IDs, and per-file outcomes.
 - `cancel_import` / `resume_import`: stop or continue only the unfinished portion of a job.
 - `health_check` / `get_diagnostics`: connection, process, window, queue and external-tool health.
 - `get_recovery_state` / `checkpoint_project`: inspect or force the complete JSON recovery checkpoint.
 - `restart_editor` / `close_editor`: save state and restart or close the visible Electron process without losing the edit.
 - `get_operation_status` / `cancel_operation`: priority-channel progress and cooperative cancellation, even while the edit queue is busy.
-- `finish_editing`: show the final Preview/Render choice in the visible editor. Include the `youtubePolicyReview` required by `review-youtube-policy`; committed policy removals become a detailed alert in this modal.
+- `finish_editing`: after editorial and technical checks, run the final-only `review-youtube-policy` gate, then show the final Preview/Render choice in the visible editor. Include its `youtubePolicyReview`; committed policy removals become a detailed alert in this modal.
 - `get_project`: complete serialized edit and revision.
 - `list_assets`: unique sources, media metadata, availability, and clip usage.
 - `get_timeline`: source/output timing, cuts, captions, tags, transitions, audio, zooms, and push-in IDs.
-- `transcribe`: a clip with no audio track is answered with `noAudio: true`, an empty transcript, a `warning`, and `isTimelapse`/`timelapseReason` — a note, not an error. Otherwise: word timestamps, grouped phrase timestamps, quality guidance, and words remapped through the current edit. Use Small Quality by default; use `auto` for spoken-language detection and Turbo when quality needs review. Voice/GTCRN + Balanced is the default denoise setup. Friendly aliases such as `base`, `small`, `turbo`, `pt`, `pt-BR`, and `en` are accepted. `timeoutMs` bounds the whole call; `stageTimeoutMs` is a separate watchdog reset at each decode, denoise, model-load, and recognition stage.
+- `transcribe`: a clip with no audio track is answered with `noAudio: true`, an empty transcript, a `warning`, and `isTimelapse`/`timelapseReason` — a note, not an error. Otherwise: word timestamps, grouped phrase timestamps, quality guidance, and words remapped through the current edit. Use Small Quality by default; use `auto` for spoken-language detection and Turbo when quality needs review. Voice/GTCRN + Balanced is the default denoise setup. Friendly aliases such as `base`, `small`, `turbo`, `pt`, `pt-BR`, and `en` are accepted. `timeoutMs` bounds the whole call; `stageTimeoutMs` is a no-progress watchdog renewed by real stage/ratio/detail advancement.
 - `analyze_silence`: detected ranges and bounded waveform metadata. Set `includeWaveform` for the first bounded page only.
 - `analyze_noise`: DNSMOS/VAD-backed background diagnosis for one clip or all audible media. Returns status, levels, quality, intervals and evidence. It never enables or applies suppression.
 - `suppress_noise`: explicit per-clip removal, audible preview cache and export scheduling. Use only after an explicit user request to remove noise; default to `gtcrn` + `balanced` unless evidence says otherwise.
 - `get_waveform_page`: request later waveform buckets without producing an oversized MCP response.
-- `get_contact_sheet`: broad visual sampling of one source interval; include a unique `requestId` when progress/cancellation may be needed.
+- `get_contact_sheet`: visual sampling of one source interval; `interval: 0.2` supports the four-second pre-cut windows (about 41 frames each). Use sparse sampling for broad coverage and split longer dense requests into bounded windows; include a unique `requestId` when progress/cancellation may be needed.
 - `get_frames`: exact source frames returned as MCP image content; include a unique `requestId` when progress/cancellation may be needed.
 - `export`: render to an admitted local path. Give it a unique `requestId`, poll `get_operation_status` for stage/percentage, and use `cancel_operation` to remove partial output when the user stops it.
 
@@ -87,11 +125,11 @@ use fresh ids and the current revision.
 - changing aspect ratio, reframe mode, resolution, output formats, loudness, soundtrack fades, and project defaults.
   Loudness is the interface's *Even out the volume across the project*: `set_project_settings` → `{ "loudness": { "enabled": true } }`, which an autonomous vlog edit always switches on (see the `edit-vlog` skill).
 
-Use `undo` and `redo` for whole batches. Use `preview` to open, seek, play, pause, or close the shared visual preview. Use `save_project`, `open_project`, and `export` only with paths admitted by the Electron MCP bridge.
+Use `undo` and `redo` for whole batches. Use `preview` to open, seek, play, pause, or close the shared edited-timeline preview. Pass `clipId` with `open` or `play` to start at that selected item’s first kept frame after trims, removed ranges, speed and transitions; omit it and seek to `0` for the separate whole-project-from-start action. Use `save_project`, `open_project`, and `export` only with paths admitted by the Electron MCP bridge.
 
 ### Caption groups and Background captions
 
-Read `get_capabilities.captions.presetGroups`, `fonts`, and `animations` instead of inventing IDs. The `classic` group contains ordinary caption designs. The `background` group contains ready-made upper-left, upper-center, upper-right, center-left, center, and center-right designs that use the existing caption timeline. Its expanded presets combine clean, rounded, serif, mono, condensed, display, geometric, slab-serif, and handwritten letterforms with still, subtle zoom, or slow scroll motion. They draw the text, then place a worker-generated portrait matte over it in both preview and export. The legacy `behind-subject` ID is the still upper-center background preset. The first use may download the local ONNX model. If segmentation is unavailable or no person is found, the text remains visible and the selected background preset and motion are preserved.
+Read `get_editor_capabilities.captions.presetGroups`, `fonts`, and `animations` instead of inventing IDs. The `classic` group contains ordinary caption designs. The `background` group contains ready-made upper-left, upper-center, upper-right, center-left, center, and center-right designs that use the existing caption timeline. Its expanded presets combine clean, rounded, serif, mono, condensed, display, geometric, slab-serif, and handwritten letterforms with still, subtle zoom, or slow scroll motion. They draw the text, then place a worker-generated portrait matte over it in both preview and export. The legacy `behind-subject` ID is the still upper-center background preset. The first use may download the local ONNX model. If segmentation is unavailable or no person is found, the text remains visible and the selected background preset and motion are preserved.
 
 ```json
 {
@@ -182,7 +220,7 @@ Use `get_timeline` after committing to obtain the generated `pushInId` for updat
 Use shape IDs returned by `get_editor_capabilities`; do not assume this example is exhaustive.
 # Video Effects (container only)
 
-Discover IDs in `get_capabilities.videoEffects.presets`. Example operation inside a revision-guarded, idempotent `apply_edit_batch`:
+Discover IDs in `get_editor_capabilities.videoEffects.presets`. Example operation inside a revision-guarded, idempotent `apply_edit_batch`:
 
 ```json
 { "type": "set_video_effect", "clipId": "clip-1", "effectId": "background-blur", "intensity": 0.75 }

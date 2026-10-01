@@ -5,6 +5,8 @@ description: Use when the user asks for thumbnails, covers, video titles, a YouT
 
 # Create video packaging in SimpleVlogEditor
 
+The local SimpleVlogEditor desktop application includes a built-in MCP server that receives AI control commands. The `simple-vlog-editor` AI client plugin connects to this server and exposes tools for reading and controlling the project in the local desktop editor. Use this MCP connection as the control interface for this workflow.
+
 Packaging is what makes a finished video get watched: three covers, three
 titles, a description with chapters and hashtags, and a tag list. All of it is
 delivered into the **Video Packaging** tool through the `simple-vlog-editor`
@@ -45,14 +47,13 @@ do not probe with `get_project`, `list_assets` and `transcribe` first.
 
 - `hasProject: true` — go on to step 2.
 - `hasProject: false` — load the videos the user means into the editor with
-  `add_media` (paths you already know) or `queue_media_import` (a folder), then
+  `queue_media_import` (an explicit list of absolute file paths; enumerate the folder first), then
   analyse them as `edit-video` describes and call `get_packaging_sources` again.
 - No videos to load, or the editor will not take them — stop and tell the user
   plainly: Video Packaging works from a project in the Video Editor, so at least
   one video has to be loaded and analysed there first. Do not invent covers from
   the file name.
-- `unknown_command` for `get_packaging_sources` means the Video Editor page is
-  not open. Ask the user to open the Video Editor and try again.
+- For `unknown_command`, inspect `get_editor_capabilities` and `health_check`. If the command is supported, call `show_tool` for `video-editor` and retry once. If it is absent, report the required editor/plugin update; the error alone does not prove the page is closed.
 
 ## Step 2 — Reuse what is already there
 
@@ -63,8 +64,7 @@ absolute paths.
 - Stored understanding is not null — use it as a starting point, but still
   verify the final edited picture across the complete timeline before choosing
   covers.
-- `transcriptReady: true` — `transcribe` returns the cached words; it costs
-  nothing to call, but do not ask for a different model just to "refresh" it.
+- `transcriptReady: true` means a complete transcript of this source is cached for the current model, language and denoise settings. `transcribe` reuses it when those settings remain unchanged. A partial transcript or a different source/model does not qualify; do not change the model merely to refresh a cached result.
 - `savedFrames` are candidates, not permission to reuse an old cover. The list
   only ever holds backgrounds saved from the edit **as it is now**; `staleFrames`
   counts the ones an edit has since invalidated, and those are refused by
@@ -82,9 +82,9 @@ Call `get_packaging_tag_style`. It returns the lettering that will be used: its
 `path` on disk, its `id`, its `name`, a description, the `mode` the reader chose
 and the `available` styles.
 
-The editor ships eleven styles — **Classic** (red, black and yellow torn blocks)
-is the default — and the reader may have loaded one of their own, which the
-application keeps across restarts.
+The editor ships a catalogue of styles — **Classic** is the default — and the
+reader may have loaded one of their own, which the application keeps across
+restarts.
 
 Two modes, both decided by the reader in the Video Packaging tool:
 
@@ -98,7 +98,9 @@ Do not choose a style on the reader's behalf and do not nag them about it. If
 they hand you an image file and ask you to use it, save it with
 `set_packaging_tag_style` — that makes it their own style and keeps it.
 
-The returned image is attached to every cover prompt as the lettering reference.
+Keep both the returned `id` and `path`. The returned image is attached to every
+cover prompt as the lettering reference. Do not reuse an older response after
+the active style changes.
 See `references/cover-prompt.md`.
 
 ## Step 4 — Understand the video, then choose three backgrounds
@@ -207,8 +209,43 @@ save new cover frames; an old frame is tied to the pre-fix edit.
 
 Now, and only now, generate the three covers — one per title, using its paired
 background and its cover text, with the prompt in
-`references/cover-prompt.md`. Save each as a 16:9 PNG in the `coversFolder`
-that `get_packaging_sources` returned.
+`references/cover-prompt.md`. Immediately before generating **each cover**, call
+`get_packaging_tag_style` again; attach that exact reference image to that cover
+request and carry its exact `id` and `path` with its result. If the active style
+changes between covers, discard the earlier draft set and regenerate it under
+the newly active style. Save each as a
+16:9 PNG in the `coversFolder` that `get_packaging_sources` returned.
+
+Before composing **each cover**, call `prepare_packaging_background` with the
+original `sourceFramePath` from `save_frames`. It writes a lossless PNG with
+deterministic exposure, contrast and colour adjustments while retaining every
+object, person and scene coordinate. Inspect it beside the original, including
+faces and dark areas. Adjust the exposure/contrast/saturation within its limits
+when needed; do not accept clipping, unnatural skin tones or amplified grain.
+Attach that corrected PNG as the generator's background, keeping the original
+saved frame as the provenance master. Deliver its path as `preparedBackgroundPath`.
+If the user explicitly requested untouched tones, respect that instead and
+record the exception. An older editor without this tool needs an equivalent
+deterministic tonal pass and visual check; an instruction in a prompt alone is
+not evidence that colour and lighting were improved.
+
+Treat the saved background frame and every face in it as protected pixels.
+Prefer deterministic colour correction and typography over regenerating the
+scene. When the user explicitly names the only people permitted in a cover,
+insert those names in the prompt's optional identity guard; otherwise allow only
+the people already visible in that frame. Never carry names from one project to
+another, infer a name from a face, add a person, or invent a named person who is
+not in the supplied frame.
+
+Compare every generated cover side by side with the selected reference before
+delivery: family and weight, colours, outlines, shadows, texture, angle,
+proportions, spacing and hierarchy. Reject invented slashes, side streaks,
+brush marks or decorations that the reference does not contain. Confirm that
+the saved final-edit frame is still the background and that faces and other
+protected areas are unchanged and unobscured. If generated letters are not
+faithful or readable, keep the source frame intact and add the lettering with a
+deterministic SVG/canvas/raster composition instead of asking image generation
+to spell it again; then repeat the same visual comparison.
 
 If you have no way to generate images, say so in one line and deliver the rest;
 the backgrounds, the titles, the cover texts and the prompts are enough for the
@@ -216,13 +253,34 @@ user to finish in the generator of their choice.
 
 Deliver everything with one `set_video_packaging` call — absolute cover paths,
 each cover's `sourceFramePath` (the `path` `save_frames` returned for its
-background) and `sourceTimestamp` (that frame's **`outputTime`**, not its source
-timestamp), the three titles, the description with real newline characters,
-and the tags — with a unique `requestId`. A background saved before the last
-change to the edit is refused: save it again and redraw that cover.
+background), `sourceTimestamp` (that frame's **`outputTime`**, not its source
+timestamp), `tagStyleId`, `tagStyleReferencePath`, `letteringMethod`
+(`generated` or `deterministic-overlay`), and `styleVerification` with
+`checked: true` plus concise comparison notes. Include the three titles, the
+description with real newline characters, and the tags, with a unique
+`requestId`. A background saved before the last change to the edit or a style
+different from the current active reference is refused: read/save again and
+redraw that cover.
+Include the corrected `preparedBackgroundPath` when using the preparation tool.
+Verification must describe what was compared: letter shapes/weight, colour,
+outline, shadow, proportions and spacing at small size; then the source,
+corrected background and final cover, with unchanged expressions and no new
+people, objects, geometry or invented decorations. An approximate font is not
+an exact match: compose the lettering with an available matching font/style,
+or disclose the specific limitation instead of declaring an unverified match.
 Omitted fields keep their current values and supplied arrays replace that
 section, so a later fix can send only what changed. Use `get_video_packaging` to
 check what is on screen before a partial update.
+
+The desktop editor also saves `video-packaging.txt` directly in the
+`packagingFolder` returned by `get_packaging_sources`, alongside the cover
+subfolder. Once all three titles, the description and the tags are delivered,
+this single UTF-8 file contains each title on its own line, a blank line, the
+full description, another blank line, and the tags separated by commas.
+Later deliveries update the same file. Keep the description's real paragraph
+breaks; do not add headings or create a separate text file per title. A failed
+save is reported by `set_video_packaging`; resolve the reported folder/write
+problem and retry before claiming that the text was saved.
 
 The editor brings Video Packaging forward by itself after the call. Immediately
 call `get_video_packaging` and verify that all three thumbnails have a positive
