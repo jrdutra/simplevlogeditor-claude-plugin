@@ -129,19 +129,19 @@ Use `undo` and `redo` for whole batches. Use `preview` to open, seek, play, paus
 
 ### Caption groups and Background captions
 
-Read `get_editor_capabilities.captions.presetGroups`, `fonts`, and `animations` instead of inventing IDs. The `classic` group contains ordinary caption designs. The `background` group contains ready-made upper-left, upper-center, upper-right, center-left, center, and center-right designs that use the existing caption timeline. Its expanded presets combine clean, rounded, serif, mono, condensed, display, geometric, slab-serif, and handwritten letterforms with still, subtle zoom, or slow scroll motion. They draw the text, then place a worker-generated portrait matte over it in both preview and export. The legacy `behind-subject` ID is the still upper-center background preset. The first use may download the local ONNX model. If segmentation is unavailable or no person is found, the text remains visible and the selected background preset and motion are preserved.
+Read `get_editor_capabilities.captions.presetGroups`, `fonts`, and `animations` instead of inventing IDs. The `classic` group contains ordinary caption designs. The `background` group contains ready-made upper-left, upper-center, upper-right, center-left, center, and center-right designs that use the existing caption timeline. Its expanded presets combine clean, rounded, serif, mono, condensed, display, geometric, slab-serif, and handwritten letterforms with still, subtle zoom, or slow scroll motion. They draw the text, then place a worker-generated portrait matte over it in both preview and export. The generic `behind-subject` ID defaults to upper-left (`positionX: 0.3`, `positionY: 0.24`). Always explicitly send these coordinates for a new background caption, even with other presets, unless the user requested another position. See [editorial defaults](editorial-defaults.md) for picture-and-sound fades and speech-free ambience music. The first use may download the local ONNX model. If segmentation is unavailable or no person is found, the text remains visible and the selected background preset and motion are preserved.
 
 ```json
 {
   "type": "add_caption",
   "clipId": "clip-3",
   "start": 12.4,
-  "duration": 2.8,
+  "duration": 4.8,
   "text": "2 DIAS",
   "caption": {
     "stylePreset": "behind-subject-zoom-in-display",
-    "positionX": 0.5,
-    "positionY": 0.5,
+    "positionX": 0.3,
+    "positionY": 0.24,
     "animation": "zoom-in",
     "fontScale": 0.28
   }

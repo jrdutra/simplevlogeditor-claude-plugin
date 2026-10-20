@@ -1,7 +1,12 @@
 ---
 name: edit-vlog
-description: Use when the user asks to edit a whole vlog (or "this footage", "my trip videos", "a rough cut") autonomously in SimpleVlogEditor — understanding every file first, rebuilding the story, removing mistakes, redundancy and dead air, then adding only the push-ins, images, cards, titles, tags, effects and transitions that serve the story.
+description: Use when the user asks to edit a whole vlog (or "this footage", "my trip videos", "a rough cut") autonomously in SimpleVlogEditor — understanding every file first, rebuilding the story, removing mistakes, redundancy and dead air, then adding only the push-ins, images, cards, titles, tags, effects and transitions that serve the story. Follows the user's default vlog brief for everything the request leaves unspecified.
 ---
+
+License plate blur is off by default, per video container. Enable it only after
+generative visual inspection finds a car with an exposed plate in that container.
+Follow the evidence and per-container MCP rule in the editorial defaults.
+
 
 # Edit a vlog autonomously in SimpleVlogEditor
 
@@ -25,6 +30,25 @@ Priorities, in this order:
 
 **The user's explicit instructions always override the automatic behaviour below**
 (counts, durations, languages, styles, what to keep).
+
+**The default brief.** Before anything else in a full-vlog edit, read
+[references/default-brief.md](references/default-brief.md). It is the user's
+standard brief for a vlog, and it fills in every detail the request leaves out:
+when the user only says "edit this", follow it in full; when the request covers
+some points, the request wins on those points and the brief supplies the rest.
+Precedence, highest first: the user's explicit request → the default brief → the
+automatic behaviour in the phases below. Its "Applying the brief" section names
+each phase it changes (silence cuts, push-in strength, section titles,
+background captions, tag sizes, QR codes, music, Subscribe, publishing
+material); the phases below carry a short reminder where that happens.
+
+Also read [the current editorial defaults](../edit-video/references/editorial-defaults.md)
+before planning: upper-left captions, opening timelapse fades, project music on
+speech-free ambience, and image-and-sound fades around text cards. Apply them in
+Phases 6a, 26, 27, 31 and 32 and verify them again in Phases 37–38.
+At every video-to-video join continuing the same project music, fade only the
+pictures (`fadeOutAudio: false` / `fadeInAudio: false`) and keep the music at its
+existing level and continuous offset. Card boundaries retain sound fades.
 
 **Central rule:** do not try to show off every feature. Use only what improves
 *this* vlog. The edit should feel deliberate, natural and human.
@@ -197,6 +221,10 @@ silences from clips of very different character.
 
 ## Phase 15 — Decide the silence cuts
 
+**Default brief:** aggressive cuts with the editor's standard settings, gentle
+cuts on landscapes, nature, art and other contemplative places — this replaces
+the split below (see `references/default-brief.md`).
+
 Unless the user said otherwise:
 
 - **Static scenes** (talking head, locked-off camera, someone seated): cut more aggressively.
@@ -215,6 +243,10 @@ verify actual `keepRanges` in the committed timeline. Detection or a successful
 dry run is never evidence that the exported video contains those cuts.
 
 ## Phase 16 — Push-in after a relevant removed silence
+
+**Default brief:** every dynamic zoom uses `scalePercent: 50`, smooth or abrupt
+as the moment needs; that replaces the strength table and the 30 limit below.
+Choosing candidates, spacing and checking them stay as described.
 
 After deciding the removals, compute for each clip the **mean duration of the
 silences that will be removed**. A removed silence *longer than that mean* is a
@@ -304,13 +336,21 @@ time. Never because they happen to be available. Verify every placement as
 
 ## Phase 26 — Text cards
 
+Every identified section/topic subtitle must become a standalone text container
+before the video span discussing that subject. Follow the heading ledger and
+split/insert rules in `../edit-video/references/editorial-defaults.md`; reuse
+matching cards and split a video when a new subject begins inside it. A caption
+over footage does not replace this required container. Verify the editor's
+automatic picture-and-sound fades on the card and its neighbouring videos.
+
 Reserve **2.5 extra seconds of fully readable hold**, after a short reveal, using
 the reading-time guidance in `references/editorial-blocks.md`. Automatic hold is
 preferred; do not override it with a brief `durationSeconds` total. Preview the
 whole reveal and hold, not only a still frame.
 
-For important changes of context only: “Next morning…”, “After lunch…”, “Day 2”,
-“Arriving in Asunción”. Not between every clip. Written in the vlog's language.
+Use concise headings such as “Next morning…”, “After lunch…”, “Day 2”,
+or “Arriving in Asunción”, in the vlog's language. Cover every identified topic;
+do not insert duplicate cards between clips continuing the same section.
 Let the renderer reduce the effective font size and balance line breaks for long
 titles; do not preserve an oversized font by squeezing the text box. Inspect a
 composited frame after the reveal and one during the animation at the project's
@@ -318,6 +358,11 @@ real aspect ratio. Every accented glyph, outline and shadow must remain inside
 the safe margins.
 
 ## Phase 27 — Background captions
+
+**Default brief:** keywords and important passages at about 80% of the width;
+prices, values, names, products, places, features, pros and cons at about 90%;
+no "2 or 3 at most" limit — as many as the content earns. Non-Subscribe tags span
+15–20% of the width.
 
 Complete an explicit keyword-candidate pass over every block. Aim to use 2–3
 strong, relevant highlights when suitable footage exists. If a candidate fails
@@ -348,6 +393,10 @@ two kinds together must not turn the video into constant zooming.
 
 ## Phase 29 — Subscribe tag
 
+**Default brief:** when someone asks the viewer to subscribe, like or act, add the
+matching tag, preferably near the beginning. Links or promotional information
+supplied with the project become QR Code tags in the service's colours.
+
 One occurrence, normally, after the viewer has already received some value.
 Avoid the first seconds, emotional moments, key scenes and visually crowded
 shots. Text in the vlog's language (e.g. “Inscreva-se”). More than four seconds
@@ -366,6 +415,10 @@ of time, a change of subject, or going into B-roll. Do not use a different
 transition on every cut.
 
 ## Phase 32 — Music
+
+**Default brief:** a music file in the project folder becomes the background
+soundtrack, favoured under text elements and section introductions, kept low
+under speech.
 
 When a supplied audio file is clearly a soundtrack, consider
 `set_project_soundtrack`. Never turn an ambiguous audio file into background
@@ -431,6 +484,10 @@ make the smallest coherent source cut, preview the join, repeat Phases 36–38,
 and run this policy gate again on the changed result.
 
 ## Phase 39 — Finish
+
+**Default brief:** titles, a description (short intro, chapters from the
+sections, natural keywords, main subjects, supplied links) and keywords are part
+of the job, and covers follow the brief's thumbnail rules.
 
 `finish_editing` with a concise summary and the complete `youtubePolicyReview`
 object from the final gate, including an empty `findings` array when the review

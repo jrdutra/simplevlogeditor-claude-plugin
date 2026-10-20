@@ -36,6 +36,18 @@ description and tags automatically* — and `finish_editing` reports it as
 A direct request from the user always wins over the setting. Do not change the
 setting (`set_project_settings` `autoVideoPackaging`) unless the user asks you to.
 
+**After a vlog edit.** When this run follows `edit-vlog`, or the user gave no
+preferences of their own, the publishing lines of the default vlog brief apply:
+read the "Publishing material" part of
+[../edit-vlog/references/default-brief.md](../edit-vlog/references/default-brief.md).
+Covers come from frames of the video itself — interesting, explanatory, good
+light, framing and expression — with faces and physical features untouched
+(light, contrast, exposure, sharpness and colour may be corrected), short large
+text that complements the title instead of repeating it, and logos of the
+product or service used discreetly. The description opens with a short
+introduction and carries chapters from the sections of the edit, natural
+keywords, the main subjects and every supplied link, without keyword stuffing.
+
 ---
 
 ## Step 1 — Make sure there is a project

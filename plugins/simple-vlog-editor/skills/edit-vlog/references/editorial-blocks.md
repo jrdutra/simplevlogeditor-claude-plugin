@@ -81,7 +81,18 @@ does not satisfy a requested silence/retake edit.
 
 ## Reading time and visual emphasis
 
-At a genuine subject change, use a short context card in the spoken language.
+Apply [the editorial defaults](../../edit-video/references/editorial-defaults.md)
+to the final retained spans: upper-left background keywords, project music for
+confirmed speech-free ambience, and separate picture-and-sound fades around
+standalone cards and after an opening timelapse. Keep these checks in the
+completion ledger; do not infer speech absence from a transcript gap alone.
+
+Every identified section/topic subtitle must have a short standalone text
+container before the first retained video span about that subject, in the spoken
+language. Split a video at the verified source-time topic boundary when needed.
+Reuse matching cards; a Background Caption or overlay does not replace the
+required text container. Apply the existing picture-and-sound fades to both card
+ends and to the facing video edges, and verify the automatically derived fades.
 Reserve a complete-text hold of `max(6, 1.4 + characters / 11 + 2.5)` seconds (cap 20 s),
 **after** a short reveal, normally 0.4–1.0 s. The extra 2.5 seconds is reading
 time, not more animation. Prefer `holdAuto: true` and omit `durationSeconds`;
