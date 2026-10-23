@@ -37,11 +37,13 @@ Open Claude Code in the folder that holds your footage and ask, for example:
 > Add upper-case background captions to the talking parts and place the photos where I mention them.
 
 The editor window opens on the first request and shows every action in its activity panel.
-Two skills are included:
+These skills are included:
 
 - **edit-video** — targeted edits: cuts, captions, tags, transitions, audio, noise removal,
   video effects, placed images, preview and export.
 - **edit-vlog** — an autonomous end-to-end edit of a whole vlog.
+- **edit-shorts** — several 8–12 s vertical shorts from one video in the Short Editor:
+  captions, the frame following the person, and the render.
 
 The editor saves a recovery checkpoint while it works, so an interrupted edit can be resumed.
 Pressing **Clear all** in the editor removes it.
